@@ -9,6 +9,7 @@ import edu.plus.cs.model.CommunityAdjacency;
 import edu.plus.cs.model.Member;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Main {
 
@@ -77,8 +78,8 @@ public class Main {
                                        HashMap<Integer, HashMap<Integer, CommunityAdjacency>> communityAdjacencies,
                                        int targetNumberOfConnections) {
         Random random = new Random();
-        List<Integer> eligibleMembersKeys = new ArrayList<>(members.keySet().stream().toList());
-        List<Integer> eligibleCommunitiesKeys = new ArrayList<>(communities.keySet().stream().toList());
+        List<Integer> eligibleMembersKeys = new ArrayList<>(members.keySet());
+        List<Integer> eligibleCommunitiesKeys = new ArrayList<>(communities.keySet());
         int drawnConnections = 0;
         while (true) {
             int randomMemberIndex = random.nextInt(eligibleMembersKeys.size());
