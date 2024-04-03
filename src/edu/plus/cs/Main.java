@@ -2,6 +2,7 @@ package edu.plus.cs;
 
 
 import edu.plus.cs.io.CommunityReader;
+import edu.plus.cs.io.FunctionOutputWriter;
 import edu.plus.cs.io.OverlapFunctionReader;
 import edu.plus.cs.model.Community;
 import edu.plus.cs.model.CommunityAdjacency;
@@ -11,12 +12,25 @@ import java.util.*;
 
 public class Main {
 
-    private HashMap<Integer, CommunityAdjacency> communityAdjacencies;
+    public static final String MACH2_DIR_PREFIX = "/home/d3000/d300342/mach2-home/mpicomm/scripts/test/";
 
     public static void main(String[] args) {
+        String communitiesFile = args[0];
+        String overlapFunctionFile = args[1];
+
+        boolean onMach2 = false;
+        if (args.length > 2) {
+            onMach2 = Boolean.parseBoolean(args[2]);
+        }
+
+        if (onMach2) {
+            communitiesFile = MACH2_DIR_PREFIX + communitiesFile;
+            overlapFunctionFile = MACH2_DIR_PREFIX + overlapFunctionFile;
+        }
+
         CommunityReader communityReader = new CommunityReader();
         HashMap<Integer, Community> communities = communityReader
-                .readCommunitiesFromFile("ig_communities_output_120h.metis");
+                .readCommunitiesFromFile(communitiesFile);
 
         HashMap<Integer, Member> members = new HashMap<>();
 
@@ -30,7 +44,7 @@ public class Main {
         }
 
         OverlapFunctionReader overlapFunctionReader = new OverlapFunctionReader(communities);
-        int[][] h = overlapFunctionReader.readOverlapFunctionFromFile("triples_2024_02_12_14_02_40.txt");
+        int[][] h = overlapFunctionReader.readOverlapFunctionFromFile(overlapFunctionFile);
 
         // System.out.println(h[6][5]);
 
@@ -41,18 +55,27 @@ public class Main {
         HashMap<Integer, HashMap<Integer, CommunityAdjacency>> communityAdjacencies = generateCommunityAdjacencies(communities);
 
         // check if number of member and community stubs are equivalent
-        int numberOfMemberStubs = members.values().stream().map(member -> member.getCommunities().size()).reduce(0, Integer::sum);
-        int numberOfCommunityStubs = communities.values().stream().map(community -> community.getMembers().size()).reduce(0, Integer::sum);
+        int numberOfTotalStubs = members.values().stream().map(member -> member.getCommunities().size()).reduce(0, Integer::sum);
 
         System.out.println("Generated initial data structures, starting random matching ...");
 
-        randomMatching(communities, communitiesStubs, members, membersStubs, h, hGenerated, communityAdjacencies);
+        System.out.println("Current timestamp: " + System.currentTimeMillis());
+        randomMatching(communities, communitiesStubs, members, membersStubs, h, hGenerated, communityAdjacencies, numberOfTotalStubs);
+        System.out.println("Current timestamp: " + System.currentTimeMillis());
+
+        communitiesStubs = null;
+        membersStubs = null;
+
+        FunctionOutputWriter.writeToOutputFile(hGenerated, onMach2);
+
+        System.out.println("Finished with randomly connecting the model!");
     }
 
     private static void randomMatching(HashMap<Integer, Community> communities, HashMap<Integer, Community> communitiesStubs,
                                        HashMap<Integer, Member> members, HashMap<Integer, Member> membersStubs,
                                        int[][] h, int[][] hGenerated,
-                                       HashMap<Integer, HashMap<Integer, CommunityAdjacency>> communityAdjacencies) {
+                                       HashMap<Integer, HashMap<Integer, CommunityAdjacency>> communityAdjacencies,
+                                       int targetNumberOfConnections) {
         Random random = new Random();
         List<Integer> eligibleMembersKeys = new ArrayList<>(members.keySet().stream().toList());
         List<Integer> eligibleCommunitiesKeys = new ArrayList<>(communities.keySet().stream().toList());
@@ -61,48 +84,27 @@ public class Main {
             int randomMemberIndex = random.nextInt(eligibleMembersKeys.size());
             int randomMemberId = eligibleMembersKeys.get(randomMemberIndex);
             if (members.get(randomMemberId).getCommunities().size() == membersStubs.get(randomMemberId).getCommunities().size()) {
-                // eligibleMembersKeys.remove(randomMemberIndex); // we do not want to check this member again
+                eligibleMembersKeys.remove(randomMemberIndex); // we do not want to check this member again
+                // here we add a constant factor since it can happen, that due to unlucky matching we do not hit the exact
+                // same amount of connected stubs
+                if (membersStubs.values().stream().map(memberStub -> memberStub.getCommunities().size()).reduce(0, Integer::sum) * 1.05
+                        >= targetNumberOfConnections) {
+                    break;
+                }
                 continue;
             }
 
             int randomCommunityId;
-            int i = 0;
-            while (i < 10) {
-                boolean exceededThreshold = false;
+            while (true) {
                 int randomCommunityIndex = random.nextInt(eligibleCommunitiesKeys.size());
                 randomCommunityId = eligibleCommunitiesKeys.get(randomCommunityIndex);
                 if (communities.get(randomCommunityId).getNumberOfMembers() == communitiesStubs.get(randomCommunityId).getNumberOfMembers()) {
-                    // eligibleCommunitiesKeys.remove(randomCommunityIndex); // we do not want to check this community again
+                    eligibleCommunitiesKeys.remove(randomCommunityIndex); // we do not want to check this community again
                     continue;
                 }
 
                 // is the chosen member already in the chosen community? yes => skip
                 if (communitiesStubs.get(randomCommunityId).getMembers().contains(randomMemberId)) {
-                    i = 0;
-                    continue;
-                }
-
-                // here we skip the threshold check until the community has a size > 4, since we removed all communities
-                // smaller than 4 in the original data => speeds up the calculation, might lead to unlucky results though
-                if (communitiesStubs.get(randomCommunityId).getMembers().size() > 4/*membersStubs.get(randomMemberId).getCommunities().size() > 4*/) {
-                    for (Integer membershipCommunityId : membersStubs.get(randomMemberId).getCommunities()) {
-                        if (!isWithinThreshold(h, hGenerated, communitiesStubs.get(randomCommunityId),
-                                communitiesStubs.get(membershipCommunityId),
-                                getIntersectionSize(communitiesStubs.get(randomCommunityId).getMembers(),
-                                        communitiesStubs.get(membershipCommunityId).getMembers()) + 1, 1.1)) {
-                            exceededThreshold = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (exceededThreshold && i < 9) {
-                    if (drawnConnections % 10000 == 0) {
-                        System.out.println(i);
-                    }
-                    // if threshold is exceeded, then try again for 10 times with another community;
-                    // otherwise just draw the connection
-                    i++;
                     continue;
                 }
 
@@ -118,10 +120,13 @@ public class Main {
                 System.out.println("Another 100k connections drawn, now at: " + drawnConnections);
                 // System.out.println("Number of all members over all communities: " + communitiesStubs.values().stream().map(community -> community.getMembers().size()).reduce(0, Integer::sum));
             }
+        }
 
-            // TODO: insert break condition here
-            // e.g. check if all members reached their target memberships or
-            // that there are as many connections drawn as in the original
+        // calculate hGenerated
+        for (Integer communityStubId : communitiesStubs.keySet()) {
+            communityAdjacencies.get(communityStubId).values().stream().forEach(communityAdjacency -> {
+                hGenerated[communitiesStubs.get(communityAdjacency.getId()).getNumberOfMembers()][communityAdjacency.getOverlapSize()] += 1;
+            });
         }
     }
 
@@ -142,7 +147,7 @@ public class Main {
             Community existingCommunity = communitiesStubs.get(communityId);
             // compute new overlap size and get the previous one
             int newOverlapSize = getIntersectionSize(newCommunity.getMembers(), existingCommunity.getMembers());
-            int previousOverlapSize = getOverlapSize(communityAdjacencies, newCommunity.getId(), existingCommunity.getId());
+            /*int previousOverlapSize = getOverlapSize(communityAdjacencies, newCommunity.getId(), existingCommunity.getId());
 
             // update hGenerated when there already existed an overlap
             if (previousOverlapSize > 0) {
@@ -151,7 +156,7 @@ public class Main {
             }
             // compute new overlap values for drawn connection
             hGenerated[existingCommunity.getNumberOfMembers()][newOverlapSize] += 1;
-            hGenerated[newCommunity.getNumberOfMembers()][newOverlapSize] += 1;
+            hGenerated[newCommunity.getNumberOfMembers()][newOverlapSize] += 1;*/
 
             // update the adjacency information
             updateCommunityAdjacencies(communityAdjacencies, newCommunity.getId(), existingCommunity.getId(), newOverlapSize);
