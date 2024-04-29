@@ -10,14 +10,14 @@ import java.util.HashSet;
 
 public class CommunityReader {
 
-    public HashMap<Integer, Community> readCommunitiesFromFile(String communitiesFile) {
+    public static HashMap<Integer, Community> readCommunitiesFromFile(String communitiesFile) {
         HashMap<Integer, Community> communities = new HashMap<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(communitiesFile))) {
             String line;
-            int communityId = 0; // Assuming community IDs start from 0 and increment by 1 for each line/community.
+            int communityId = 1; // communities start at 1
             while ((line = br.readLine()) != null) {
-                // Splitting each line by spaces to get member IDs as strings, then parsing them to integers.
+                // splitting each line by spaces to get member IDs as strings, then parsing them to integers.
                 HashSet<Integer> memberSet = new HashSet<>();
                 for (String memberIdStr : line.split(" ")) {
                     try {

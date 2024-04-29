@@ -28,14 +28,11 @@ public class FunctionOutputWriter {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath))) {
             for (int communitySize = 0; communitySize < hGenerated.length; communitySize++) {
                 for (int overlapSize = 0; overlapSize < hGenerated[communitySize].length; overlapSize++) {
-                    // The matrix index starts from 0, but we need to start from 1 for the output
-                    int formattedCommunitySize = communitySize + 1;
-                    int formattedOverlapSize = overlapSize + 1;
                     int value = hGenerated[communitySize][overlapSize];
 
                     // Only write non-zero values to reduce file size
                     if (value > 0) {
-                        writer.write(formattedOverlapSize + ", " + formattedCommunitySize + ", " + value);
+                        writer.write(overlapSize + ", " + communitySize + ", " + value);
                         writer.newLine();
                     }
                 }

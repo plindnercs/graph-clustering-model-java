@@ -1,38 +1,170 @@
 package edu.plus.cs;
 
 
-import edu.plus.cs.io.CommunityReader;
-import edu.plus.cs.io.FunctionOutputWriter;
-import edu.plus.cs.io.OverlapFunctionReader;
+import edu.plus.cs.io.*;
 import edu.plus.cs.model.Community;
 import edu.plus.cs.model.CommunityAdjacency;
 import edu.plus.cs.model.Member;
+import edu.plus.cs.util.Mode;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class Main {
 
     public static final String MACH2_DIR_PREFIX = "/home/d3000/d300342/mach2-home/mpicomm/scripts/test/";
 
     public static void main(String[] args) {
-        String communitiesFile = args[0];
-        String overlapFunctionFile = args[1];
-
-        boolean onMach2 = false;
-        if (args.length > 2) {
-            onMach2 = Boolean.parseBoolean(args[2]);
+        if (args.length < 1) {
+            System.err.println("Invalid mode provided!");
+            return;
         }
 
+        Mode mode = Mode.valueOf(args[0].toUpperCase());
+        boolean onMach2;
+        switch (mode) {
+            case RANDOM_MATCHING:
+                if (args.length < 4) {
+                    System.err.println("Invalid number of arguments for mode 'random_matching'!");
+                    System.err.println("Use: random_matching <communitiesFile> <overlapFunctionFile> <randomMatchingFactor> (<onMach2>)");
+                    return;
+                }
+
+                String communitiesFile = args[1];
+                String overlapFunctionFile = args[2];
+                double randomMatchingFactor = Double.parseDouble(args[3]);
+
+                onMach2 = false;
+                if (args.length > 4) {
+                    onMach2 = Boolean.parseBoolean(args[4]);
+                }
+
+                prepareAndExecuteRandomMatching(communitiesFile, overlapFunctionFile, randomMatchingFactor, onMach2);
+
+                break;
+            case DRAW_EDGES:
+                if (args.length < 4) {
+                    System.err.println("Invalid number of arguments for mode 'draw_edges'!");
+                    System.err.println("Use: draw_edges <matchedCommunitiesFile> <targetNumberOfEdges> <threshold> (<onMach2>)");
+                    return;
+                }
+
+                String matchedCommunitiesFile = args[1];
+                int targetNumberOfEdges = Integer.parseInt(args[2]);
+                double threshold = Double.parseDouble(args[3]);
+
+                onMach2 = false;
+                if (args.length > 4) {
+                    onMach2 = Boolean.parseBoolean(args[4]);
+                }
+
+                drawEdges(matchedCommunitiesFile, targetNumberOfEdges, threshold, onMach2);
+
+                break;
+        }
+    }
+
+    private static void drawEdges(String matchedCommunitiesFile, int targetNumberOfEdges, double threshold,
+                                  boolean onMach2) {
+        System.out.println("Starting drawing edges ...");
+
+        if (onMach2) {
+            matchedCommunitiesFile = MACH2_DIR_PREFIX + matchedCommunitiesFile;
+        }
+
+        HashMap<Integer, Community> matchedCommunities = CommunityReader.readCommunitiesFromFile(matchedCommunitiesFile);
+
+        if (matchedCommunities == null) {
+            System.err.println("Could not read matched communities!");
+            return;
+        }
+
+        // first we create adjacencyLists for all member/vertices in our graph
+        HashMap<Integer, List<Integer>> adjacencyLists = getEmptyAdjacencyLists(matchedCommunities);
+
+        // we start with an initial edge probability of 0.5 and do a binary search inspired approach to hit the
+        // target of drawn edges inside our graph
+        double p = 0.5;
+        Random random = new Random();
+        boolean thresholdReached = false;
+        int currentNumberOfEdges = 0;
+        List<Integer> matchedCommunityIds = new ArrayList<>(matchedCommunities.keySet());
+        while (!thresholdReached) {
+            for (int matchedCommunityId : matchedCommunityIds) {
+                Community currentCommunity = matchedCommunities.get(matchedCommunityId);
+                for (int memberId : currentCommunity.getMembers()) {
+                    for (int otherMemberId : currentCommunity.getMembers()) {
+                        if (otherMemberId == memberId) {
+                            continue;
+                        }
+
+                        if (random.nextDouble() <= p) {
+                            // draw edge between vertices
+                            if (!adjacencyLists.get(memberId).contains(otherMemberId)) {
+                                adjacencyLists.get(memberId).add(otherMemberId);
+                            }
+
+                            if (!adjacencyLists.get(otherMemberId).contains(memberId)) {
+                                adjacencyLists.get(otherMemberId).add(memberId);
+                            }
+                        }
+                    }
+                }
+            }
+
+            currentNumberOfEdges = getNumberOfEdges(adjacencyLists);
+
+            if (currentNumberOfEdges < (targetNumberOfEdges * threshold)) {
+                p = p * 1.5;
+
+                adjacencyLists = getEmptyAdjacencyLists(matchedCommunities);
+            } else if (currentNumberOfEdges > (targetNumberOfEdges + (targetNumberOfEdges * (1 - threshold)))) {
+                p = p / 2.0;
+
+                adjacencyLists = getEmptyAdjacencyLists(matchedCommunities);
+            } else {
+                thresholdReached = true;
+            }
+        }
+
+        GraphWriter.writeGraphToFile(adjacencyLists, currentNumberOfEdges, onMach2);
+
+        System.out.println("Reached threshold of " + threshold + " with " + currentNumberOfEdges + " edges");
+    }
+
+    private static HashMap<Integer, List<Integer>> getEmptyAdjacencyLists(HashMap<Integer, Community> matchedCommunities) {
+        List<Integer> matchedCommunityIds = new ArrayList<>(matchedCommunities.keySet());
+
+        HashMap<Integer, List<Integer>> adjacencyLists = new HashMap<>();
+        for (int matchedCommunityId : matchedCommunityIds) {
+            Community currentCommunity = matchedCommunities.get(matchedCommunityId);
+            for (int memberId : currentCommunity.getMembers()) {
+                adjacencyLists.put(memberId, new LinkedList<>());
+            }
+        }
+
+        return adjacencyLists;
+    }
+
+    private static int getNumberOfEdges(HashMap<Integer, List<Integer>> adjacencyLists) {
+        int numberOfEdgeEntries = 0;
+
+        List<Integer> verticesIds = new ArrayList<>(adjacencyLists.keySet());
+
+        for (int vertexId : verticesIds) {
+            numberOfEdgeEntries += adjacencyLists.get(vertexId).size();
+        }
+
+        return numberOfEdgeEntries / 2;
+    }
+
+    private static void prepareAndExecuteRandomMatching(String communitiesFile, String overlapFunctionFile,
+                                                        double randomMatchingFactor, boolean onMach2) {
         if (onMach2) {
             communitiesFile = MACH2_DIR_PREFIX + communitiesFile;
             overlapFunctionFile = MACH2_DIR_PREFIX + overlapFunctionFile;
         }
 
-        CommunityReader communityReader = new CommunityReader();
-        HashMap<Integer, Community> communities = communityReader
-                .readCommunitiesFromFile(communitiesFile);
-
+        HashMap<Integer, Community> communities = CommunityReader.readCommunitiesFromFile(communitiesFile);
         HashMap<Integer, Member> members = new HashMap<>();
 
         for (Community community : communities.values()) {
@@ -58,11 +190,15 @@ public class Main {
         // check if number of member and community stubs are equivalent
         int numberOfTotalStubs = members.values().stream().map(member -> member.getCommunities().size()).reduce(0, Integer::sum);
 
-        System.out.println("Generated initial data structures, starting random matching ...");
+        System.out.println("Generated initial data structures, starting random matching with factor: " + randomMatchingFactor + " ...");
 
         System.out.println("Current timestamp: " + System.currentTimeMillis());
-        randomMatching(communities, communitiesStubs, members, membersStubs, h, hGenerated, communityAdjacencies, numberOfTotalStubs);
+        randomMatching(communities, communitiesStubs, members, membersStubs, h, hGenerated, communityAdjacencies, numberOfTotalStubs,
+                randomMatchingFactor);
+
         System.out.println("Current timestamp: " + System.currentTimeMillis());
+
+        CommunityWriter.writeCommunitiesToFile(communitiesStubs, membersStubs, onMach2);
 
         communitiesStubs = null;
         membersStubs = null;
@@ -76,19 +212,33 @@ public class Main {
                                        HashMap<Integer, Member> members, HashMap<Integer, Member> membersStubs,
                                        int[][] h, int[][] hGenerated,
                                        HashMap<Integer, HashMap<Integer, CommunityAdjacency>> communityAdjacencies,
-                                       int targetNumberOfConnections) {
+                                       int targetNumberOfConnections, double randomMatchingFactor) {
         Random random = new Random();
-        List<Integer> eligibleMembersKeys = new ArrayList<>(members.keySet());
-        List<Integer> eligibleCommunitiesKeys = new ArrayList<>(communities.keySet());
+        // List<Integer> eligibleMembersKeys = new ArrayList<>(members.keySet());
+        // List<Integer> eligibleCommunitiesKeys = new ArrayList<>(communities.keySet());
+
+        List<Integer> fairlyDistributedMembersKeys = new ArrayList<>();
+        for (Integer memberKey : members.keySet()) {
+            for (int i = 0; i < members.get(memberKey).getCommunities().size(); i++) {
+                fairlyDistributedMembersKeys.add(memberKey);
+            }
+        }
+
+        List<Integer> fairlyDistributedCommunitiesKeys = new ArrayList<>();
+        for (Integer communityKey : communities.keySet()) {
+            for (int i = 0; i < communities.get(communityKey).getMembers().size(); i++) {
+                fairlyDistributedCommunitiesKeys.add(communityKey);
+            }
+        }
+
         int drawnConnections = 0;
         while (true) {
-            int randomMemberIndex = random.nextInt(eligibleMembersKeys.size());
-            int randomMemberId = eligibleMembersKeys.get(randomMemberIndex);
+            int randomMemberIndex = random.nextInt(fairlyDistributedMembersKeys.size());
+            int randomMemberId = fairlyDistributedMembersKeys.get(randomMemberIndex);
             if (members.get(randomMemberId).getCommunities().size() == membersStubs.get(randomMemberId).getCommunities().size()) {
-                eligibleMembersKeys.remove(randomMemberIndex); // we do not want to check this member again
                 // here we add a constant factor since it can happen, that due to unlucky matching we do not hit the exact
                 // same amount of connected stubs
-                if (membersStubs.values().stream().map(memberStub -> memberStub.getCommunities().size()).reduce(0, Integer::sum) * 1.05
+                if (membersStubs.values().stream().map(memberStub -> memberStub.getCommunities().size()).reduce(0, Integer::sum) * randomMatchingFactor
                         >= targetNumberOfConnections) {
                     break;
                 }
@@ -97,12 +247,8 @@ public class Main {
 
             int randomCommunityId;
             while (true) {
-                int randomCommunityIndex = random.nextInt(eligibleCommunitiesKeys.size());
-                randomCommunityId = eligibleCommunitiesKeys.get(randomCommunityIndex);
-                if (communities.get(randomCommunityId).getNumberOfMembers() == communitiesStubs.get(randomCommunityId).getNumberOfMembers()) {
-                    eligibleCommunitiesKeys.remove(randomCommunityIndex); // we do not want to check this community again
-                    continue;
-                }
+                int randomCommunityIndex = random.nextInt(fairlyDistributedCommunitiesKeys.size());
+                randomCommunityId = fairlyDistributedCommunitiesKeys.get(randomCommunityIndex);
 
                 // is the chosen member already in the chosen community? yes => skip
                 if (communitiesStubs.get(randomCommunityId).getMembers().contains(randomMemberId)) {
@@ -114,6 +260,13 @@ public class Main {
 
                 drawnConnections += 1;
 
+                fairlyDistributedMembersKeys.remove(randomMemberIndex); // we do not want to check this member stub again
+                fairlyDistributedCommunitiesKeys.remove(randomCommunityIndex); // we do not want to check this community stub again
+
+                break;
+            }
+
+            if (fairlyDistributedMembersKeys.isEmpty() || fairlyDistributedCommunitiesKeys.isEmpty()) {
                 break;
             }
 
