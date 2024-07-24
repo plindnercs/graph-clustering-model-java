@@ -2,6 +2,7 @@ package edu.plus.cs.impl;
 
 import edu.plus.cs.io.CommunityWriter;
 import edu.plus.cs.io.FunctionOutputWriter;
+import edu.plus.cs.model.ChangedPosition;
 import edu.plus.cs.model.Community;
 import edu.plus.cs.model.CommunityAdjacency;
 import edu.plus.cs.model.Member;
@@ -60,8 +61,8 @@ public class ApproximateOverlapFunctionImpl {
             // TODO: only backup communityAdjacencies that potentially change?
             HashMap<Integer, HashMap<Integer, CommunityAdjacency>> originalCommunityAdjacencies = copyCommunityAdjacencies(communityAdjacencies);
 
-            // list to track the changes
-            List<int[]> changedPositions = new ArrayList<>();
+            // set to track the changes
+            Set<ChangedPosition> changedPositions = new HashSet<>();
 
             // swap members
             firstCommunity.getMembers().remove(firstMember);
@@ -137,11 +138,11 @@ public class ApproximateOverlapFunctionImpl {
     }
 
     private static void updateOverlaps(Community firstCommunity, Community secondCommunity,
-                                        int firstMemberId, int secondMemberId,
-                                        HashMap<Integer, Community> communitiesStubs,
-                                        HashMap<Integer, Member> membersStubs,
-                                        HashMap<Integer, HashMap<Integer, CommunityAdjacency>> communityAdjacencies,
-                                        int[][] hGenerated, List<int[]> changedPositions, Logger logger) {
+                                       int firstMemberId, int secondMemberId,
+                                       HashMap<Integer, Community> communitiesStubs,
+                                       HashMap<Integer, Member> membersStubs,
+                                       HashMap<Integer, HashMap<Integer, CommunityAdjacency>> communityAdjacencies,
+                                       int[][] hGenerated, Set<ChangedPosition> changedPositions, Logger logger) {
 
         Set<Integer> affectedCommunities = membersStubs.get(firstMemberId).getCommunities();
         affectedCommunities.addAll(membersStubs.get(secondMemberId).getCommunities());
@@ -311,13 +312,13 @@ public class ApproximateOverlapFunctionImpl {
         }
     }
 
-    private static boolean isImprovement(int[][] originalHGenerated, int[][] newHGenerated, int[][] targetH, List<int[]> changedPositions) {
+    private static boolean isImprovement(int[][] originalHGenerated, int[][] newHGenerated, int[][] targetH, Set<ChangedPosition> changedPositions) {
         int improved = 0;
         int worsened = 0;
 
-        for (int[] position : changedPositions) {
-            int i = position[0];
-            int j = position[1];
+        for (ChangedPosition position : changedPositions) {
+            int i = position.getCommunitySize();
+            int j = position.getOverlapSize();
             int originalDifference = Math.abs(originalHGenerated[i][j] - ((targetH.length > i && targetH[0].length > j) ? targetH[i][j] : 0));
             int newDifference = Math.abs(newHGenerated[i][j] - ((targetH.length > i && targetH[0].length > j) ? targetH[i][j] : 0));
 
@@ -336,20 +337,20 @@ public class ApproximateOverlapFunctionImpl {
     }
 
     private static void changeOverlapFunction(int firstCommunitySize, int secondCommunitySize, int overlapSize,
-                                              int[][] h, List<int[]> changedPositions, FunctionChange change,
+                                              int[][] h, Set<ChangedPosition> changedPositions, FunctionChange change,
                                               String overlapCase, Logger logger) {
         switch (change) {
             case INCREASE:
                 h[firstCommunitySize][overlapSize] += 1;
                 h[secondCommunitySize][overlapSize] += 1;
-                changedPositions.add(new int[]{firstCommunitySize, overlapSize});
-                changedPositions.add(new int[]{secondCommunitySize, overlapSize});
+                changedPositions.add(new ChangedPosition(firstCommunitySize, overlapSize));
+                changedPositions.add(new ChangedPosition(secondCommunitySize, overlapSize));
                 break;
             case DECREASE:
                 h[firstCommunitySize][overlapSize] -= 1;
                 h[secondCommunitySize][overlapSize] -= 1;
-                changedPositions.add(new int[]{firstCommunitySize, overlapSize});
-                changedPositions.add(new int[]{secondCommunitySize, overlapSize});
+                changedPositions.add(new ChangedPosition(firstCommunitySize, overlapSize));
+                changedPositions.add(new ChangedPosition(secondCommunitySize, overlapSize));
 
                 // if (h[firstCommunitySize][overlapSize] == 0 || h[secondCommunitySize][overlapSize] == 0) {
                 //     System.out.println("Zero state reached in case " + overlapCase + " !");

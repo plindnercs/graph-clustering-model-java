@@ -23,4 +23,20 @@ public class ChangedPosition {
     public int hashCode() {
         return Objects.hash(communitySize, overlapSize);
     }
+
+    public int getCommunitySize() {
+        return communitySize;
+    }
+
+    public void setCommunitySize(int communitySize) {
+        this.communitySize = communitySize;
+    }
+
+    public int getOverlapSize() {
+        return overlapSize;
+    }
+
+    public void setOverlapSize(int overlapSize) {
+        this.overlapSize = overlapSize;
+    }
 }
