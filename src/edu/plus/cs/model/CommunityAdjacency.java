@@ -1,7 +1,5 @@
 package edu.plus.cs.model;
 
-import java.util.HashSet;
-
 public class CommunityAdjacency {
 
     private int id;

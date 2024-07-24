@@ -1,6 +1,8 @@
 package edu.plus.cs.io;
 
-import edu.plus.cs.Main;
+import edu.plus.cs.util.Constants;
+import edu.plus.cs.util.LogLevel;
+import edu.plus.cs.util.Logger;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -9,20 +11,21 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class FunctionOutputWriter {
+
     /**
      * Writes the contents of the hGenerated matrix to a file in the specified format.
      *
      * @param hGenerated The matrix containing the overlap function data.
      * @param onMach2 Indicates if the application runs locally or on the mach2 cluster.
      */
-    public static void writeToOutputFile(int[][] hGenerated, boolean onMach2) {
+    public static void writeToOutputFile(int[][] hGenerated, String prefix, boolean onMach2, Logger logger) {
         LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS");
         String timestamp = now.format(formatter);
 
-        String outputPath = "output_" + timestamp + ".txt";
+        String outputPath = "output_" + prefix + timestamp + ".txt";
         if (onMach2) {
-            outputPath = Main.MACH2_DIR_PREFIX + outputPath;
+            outputPath = Constants.MACH2_DIR_PREFIX + outputPath;
         }
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath))) {
@@ -37,8 +40,10 @@ public class FunctionOutputWriter {
                     }
                 }
             }
+
+            logger.log("Finished writing into file", LogLevel.DEBUG, outputPath);
         } catch (IOException e) {
-            System.err.println("Error writing to the output file: " + e.getMessage());
+            logger.log("Error writing to the output file: " + e.getMessage(), LogLevel.ERROR, outputPath);
         }
     }
 }

@@ -1,8 +1,9 @@
 package edu.plus.cs.io;
 
-import edu.plus.cs.Main;
 import edu.plus.cs.model.Community;
-import edu.plus.cs.model.Member;
+import edu.plus.cs.util.Constants;
+import edu.plus.cs.util.LogLevel;
+import edu.plus.cs.util.Logger;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -15,19 +16,20 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class CommunityWriter {
-    public static void writeCommunitiesToFile(HashMap<Integer, Community> communitiesStubs, HashMap<Integer,
-            Member> membersStubs, boolean onMach2) {
+    public static void writeCommunitiesToFile(HashMap<Integer, Community> communitiesStubs, String prefix,
+                                              boolean onMach2, Logger logger) {
         LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmssSSS");
         String timestamp = now.format(formatter);
 
-        String outputPath = "random_matching_communities_output_" + timestamp + ".txt";
+        String outputPath = "random_matching_communities_output_" + prefix + timestamp + ".txt";
         if (onMach2) {
-            outputPath = Main.MACH2_DIR_PREFIX + outputPath;
+            outputPath = Constants.MACH2_DIR_PREFIX + outputPath;
         }
 
         List<Integer> sortedCommunityStubs = communitiesStubs.keySet().stream().sorted().collect(Collectors.toList());
-        System.out.println("First community stub id: " + sortedCommunityStubs.get(0));
+
+        logger.log("First community stub id: " + sortedCommunityStubs.get(0), LogLevel.DEBUG, outputPath);
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath))) {
             for (int communityId : sortedCommunityStubs) {
                 List<Integer> members = new ArrayList<>(communitiesStubs.get(communityId).getMembers());
@@ -41,8 +43,10 @@ public class CommunityWriter {
                 }
                 writer.newLine();
             }
+
+            logger.log("Finished writing into file", LogLevel.DEBUG, outputPath);
         } catch (IOException e) {
-            System.err.println("Error writing to the output file: " + e.getMessage());
+            logger.log("Error writing to the output file: " + e.getMessage(), LogLevel.ERROR, outputPath);
         }
     }
 }

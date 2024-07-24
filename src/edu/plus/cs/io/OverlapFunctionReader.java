@@ -1,6 +1,8 @@
 package edu.plus.cs.io;
 
 import edu.plus.cs.model.Community;
+import edu.plus.cs.util.LogLevel;
+import edu.plus.cs.util.Logger;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -15,7 +17,7 @@ public class OverlapFunctionReader {
         this.communities = communities;
     }
 
-    public int[][] readOverlapFunctionFromFile(String overlapsFile) {
+    public int[][] readOverlapFunctionFromFile(String overlapsFile, Logger logger) {
         int maxCommunitySize = findMaxCommunitySize();
         int maxOverlap = findMaxOverlap(overlapsFile);
 
@@ -34,9 +36,11 @@ public class OverlapFunctionReader {
                 h[communitySize][overlapSize] = count;
             }
 
+            logger.log("Read overlap function from file", LogLevel.DEBUG, overlapsFile);
+
             return h;
         } catch (IOException e) {
-            System.err.println("Error reading from the file: " + e.getMessage());
+            logger.log("Error reading from the file: " + e.getMessage(), LogLevel.ERROR, overlapsFile);
             return null;
         }
     }
