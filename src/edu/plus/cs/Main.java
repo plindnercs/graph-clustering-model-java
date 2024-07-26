@@ -5,6 +5,12 @@ import edu.plus.cs.impl.*;
 import edu.plus.cs.util.Logger;
 import edu.plus.cs.util.Mode;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryPoolMXBean;
+import java.lang.management.MemoryUsage;
+import java.util.List;
+
 public class Main {
 
     public static void main(String[] args) {
@@ -34,6 +40,8 @@ public class Main {
 
                 RandomMatchingImpl.prepareAndExecuteRandomMatching(communitiesFile, overlapFunctionFile,
                         randomMatchingFactor, onMach2, logger);
+
+                displayPeakMemoryUsage();
 
                 break;
             case DRAW_EDGES:
@@ -78,5 +86,31 @@ public class Main {
 
                 break;
         }
+    }
+
+    private static void displayPeakMemoryUsage() {
+        MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
+        List<MemoryPoolMXBean> memoryPoolMXBeans = ManagementFactory.getMemoryPoolMXBeans();
+
+        long peakUsedHeapMemory = 0;
+        long peakUsedNonHeapMemory = 0;
+
+        for (MemoryPoolMXBean pool : memoryPoolMXBeans) {
+            MemoryUsage peakUsage = pool.getPeakUsage();
+            if (pool.getType() == java.lang.management.MemoryType.HEAP) {
+                peakUsedHeapMemory += peakUsage.getUsed();
+            } else if (pool.getType() == java.lang.management.MemoryType.NON_HEAP) {
+                peakUsedNonHeapMemory += peakUsage.getUsed();
+            }
+        }
+
+        System.out.println("Peak used heap memory: " + peakUsedHeapMemory + " bytes");
+        System.out.println("Peak used non-heap memory: " + peakUsedNonHeapMemory + " bytes");
+
+        // Optionally, you can also display the current memory usage
+        MemoryUsage heapMemoryUsage = memoryMXBean.getHeapMemoryUsage();
+        MemoryUsage nonHeapMemoryUsage = memoryMXBean.getNonHeapMemoryUsage();
+        System.out.println("Current heap memory usage: " + heapMemoryUsage.getUsed() + " bytes");
+        System.out.println("Current non-heap memory usage: " + nonHeapMemoryUsage.getUsed() + " bytes");
     }
 }

@@ -30,7 +30,7 @@ public class ApproximateOverlapFunctionImpl {
         long numberOfSwaps = 0;
 
         logger.log("Error before swaps: " + calculateQuadraticError(h, hGenerated), LogLevel.INFO);
-        while (numberOfConsecutiveIncorrectSwaps < 1000 && numberOfSwaps < 25000) { // TODO: how many consecutive number of incorrect swaps should we allow before terminating?
+        while (numberOfConsecutiveIncorrectSwaps < 10000 && numberOfSwaps < 25000) { // TODO: how many consecutive number of incorrect swaps should we allow before terminating?
             // choose two random communities
             Community firstCommunity = communitiesStubs.get(random.ints(1, 1, communityStubsIds.size()).findFirst().getAsInt());
             Community secondCommunity = communitiesStubs.get(random.ints(1, 1, communityStubsIds.size()).findFirst().getAsInt());
@@ -51,6 +51,9 @@ public class ApproximateOverlapFunctionImpl {
             // Map<Integer, CommunityAdjacency> firstCommunityAdjacencies = communityAdjacencies.get(firstCommunity.getId());
             // Map<Integer, CommunityAdjacency> secondCommunityAdjacencies = communityAdjacencies.get(secondCommunity.getId());
 
+            // identify affected communities
+            Set<Integer> affectedCommunities = identifyAffectedCommunities(firstMember, secondMember, membersStubs);
+
             // backup the original state in case there was no improvement
             HashSet<Integer> originalFirstCommunityMembers = new HashSet<>(firstCommunity.getMembers());
             HashSet<Integer> originalSecondCommunityMembers = new HashSet<>(secondCommunity.getMembers());
@@ -59,7 +62,8 @@ public class ApproximateOverlapFunctionImpl {
             // TODO: only backup changed values as key-value-pairs?
             int[][] originalHGenerated = copyMatrix(hGenerated);
             // TODO: only backup communityAdjacencies that potentially change?
-            HashMap<Integer, HashMap<Integer, CommunityAdjacency>> originalCommunityAdjacencies = copyCommunityAdjacencies(communityAdjacencies);
+            // HashMap<Integer, HashMap<Integer, CommunityAdjacency>> originalCommunityAdjacencies = copyCommunityAdjacencies(communityAdjacencies);
+            HashMap<Integer, HashMap<Integer, CommunityAdjacency>> originalCommunityAdjacencies = backupCommunityAdjacencies(communityAdjacencies, affectedCommunities);
 
             // set to track the changes
             Set<ChangedPosition> changedPositions = new HashSet<>();
@@ -90,24 +94,36 @@ public class ApproximateOverlapFunctionImpl {
                 cleanOldTimestamps(swapTimestamps);
                 numberOfSwaps++;
             } else {
+                if (numberOfConsecutiveIncorrectSwaps % 10 == 0) {
+                    logger.log("No improvement found with swap, rolling back changes!", LogLevel.DEBUG, firstCommunity.getId(), secondCommunity.getId(), firstMember, secondMember);
+                }
+
                 // restore the original state if no improvement
                 firstCommunity.setMembers(originalFirstCommunityMembers);
                 secondCommunity.setMembers(originalSecondCommunityMembers);
                 membersStubs.get(firstMember).setCommunities(originalFirstMemberCommunities);
                 membersStubs.get(secondMember).setCommunities(originalSecondMemberCommunities);
                 hGenerated = originalHGenerated;
-                communityAdjacencies = originalCommunityAdjacencies;
+                // communityAdjacencies = originalCommunityAdjacencies;
 
-                originalFirstCommunityMembers = null;
-                originalSecondCommunityMembers = null;
-                originalFirstMemberCommunities = null;
-                originalSecondMemberCommunities = null;
-                originalHGenerated = null;
-                originalCommunityAdjacencies = null;
+                for (Integer communityId : affectedCommunities) {
+                    if (originalCommunityAdjacencies.containsKey(communityId)) {
+                        communityAdjacencies.put(communityId, originalCommunityAdjacencies.get(communityId));
+                    } else {
+                        communityAdjacencies.remove(communityId);
+                    }
+                }
+
+                // originalFirstCommunityMembers = null;
+                // originalSecondCommunityMembers = null;
+                // originalFirstMemberCommunities = null;
+                // originalSecondMemberCommunities = null;
+                // originalHGenerated = null;
+                // originalCommunityAdjacencies = null;
 
                 // call garbage collector to collect the unwanted changes, e.g. the hGenerated that did not lead to
                 // an improvement
-                System.gc();
+                // System.gc();
 
                 if (incorrectSwap) {
                     numberOfConsecutiveIncorrectSwaps++;
@@ -147,7 +163,7 @@ public class ApproximateOverlapFunctionImpl {
         Set<Integer> affectedCommunities = membersStubs.get(firstMemberId).getCommunities();
         affectedCommunities.addAll(membersStubs.get(secondMemberId).getCommunities());
 
-        logger.log("Number of affected communities: " + affectedCommunities.size(), LogLevel.DEBUG);
+        //  logger.log("Number of affected communities: " + affectedCommunities.size(), LogLevel.DEBUG);
 
         for (Integer otherCommunityId : affectedCommunities/*communitiesStubs.keySet()*/) {
             Community otherCommunity = communitiesStubs.get(otherCommunityId);
@@ -372,6 +388,29 @@ public class ApproximateOverlapFunctionImpl {
             default:
                 logger.log("Invalid function change mode provided!", LogLevel.ERROR, change);
         }
+    }
+
+    private static Set<Integer> identifyAffectedCommunities(int firstMemberId, int secondMemberId,
+                                                            HashMap<Integer, Member> membersStubs) {
+        Set<Integer> affectedCommunities = new HashSet<>(membersStubs.get(firstMemberId).getCommunities());
+        affectedCommunities.addAll(membersStubs.get(secondMemberId).getCommunities());
+        return affectedCommunities;
+    }
+
+    private static HashMap<Integer, HashMap<Integer, CommunityAdjacency>> backupCommunityAdjacencies(
+            HashMap<Integer, HashMap<Integer, CommunityAdjacency>> communityAdjacencies, Set<Integer> affectedCommunities) {
+        HashMap<Integer, HashMap<Integer, CommunityAdjacency>> backup = new HashMap<>();
+        for (Integer communityId : affectedCommunities) {
+            if (communityAdjacencies.containsKey(communityId)) {
+                HashMap<Integer, CommunityAdjacency> innerMap = new HashMap<>();
+                for (Map.Entry<Integer, CommunityAdjacency> entry : communityAdjacencies.get(communityId).entrySet()) {
+                    CommunityAdjacency adjacency = entry.getValue();
+                    innerMap.put(entry.getKey(), new CommunityAdjacency(adjacency.getId(), adjacency.getOverlapSize()));
+                }
+                backup.put(communityId, innerMap);
+            }
+        }
+        return backup;
     }
 
     private static int[][] copyMatrix(int[][] matrix) {
