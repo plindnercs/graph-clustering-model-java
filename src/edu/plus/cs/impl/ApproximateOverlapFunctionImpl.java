@@ -30,7 +30,7 @@ public class ApproximateOverlapFunctionImpl {
         long numberOfSwaps = 0;
 
         logger.log("Error before swaps: " + calculateQuadraticError(h, hGenerated), LogLevel.INFO);
-        while (numberOfConsecutiveIncorrectSwaps < 10000 && numberOfSwaps < 25000) { // TODO: how many consecutive number of incorrect swaps should we allow before terminating?
+        while (numberOfConsecutiveIncorrectSwaps < 1000 && numberOfSwaps < 1000000) { // TODO: how many consecutive number of incorrect swaps should we allow before terminating?
             // choose two random communities
             Community firstCommunity = communitiesStubs.get(random.ints(1, 1, communityStubsIds.size()).findFirst().getAsInt());
             Community secondCommunity = communitiesStubs.get(random.ints(1, 1, communityStubsIds.size()).findFirst().getAsInt());
@@ -62,8 +62,10 @@ public class ApproximateOverlapFunctionImpl {
             // TODO: only backup changed values as key-value-pairs?
             int[][] originalHGenerated = copyMatrix(hGenerated);
             // TODO: only backup communityAdjacencies that potentially change?
-            // HashMap<Integer, HashMap<Integer, CommunityAdjacency>> originalCommunityAdjacencies = copyCommunityAdjacencies(communityAdjacencies);
-            HashMap<Integer, HashMap<Integer, CommunityAdjacency>> originalCommunityAdjacencies = backupCommunityAdjacencies(communityAdjacencies, affectedCommunities);
+            // HashMap<Integer, HashMap<Integer, CommunityAdjacency>> originalCommunityAdjacencies =
+            // copyCommunityAdjacencies(communityAdjacencies);
+            HashMap<Integer, HashMap<Integer, CommunityAdjacency>> originalCommunityAdjacencies =
+                    backupCommunityAdjacencies(communityAdjacencies, affectedCommunities);
 
             // set to track the changes
             Set<ChangedPosition> changedPositions = new HashSet<>();
@@ -114,17 +116,6 @@ public class ApproximateOverlapFunctionImpl {
                     }
                 }
 
-                // originalFirstCommunityMembers = null;
-                // originalSecondCommunityMembers = null;
-                // originalFirstMemberCommunities = null;
-                // originalSecondMemberCommunities = null;
-                // originalHGenerated = null;
-                // originalCommunityAdjacencies = null;
-
-                // call garbage collector to collect the unwanted changes, e.g. the hGenerated that did not lead to
-                // an improvement
-                // System.gc();
-
                 if (incorrectSwap) {
                     numberOfConsecutiveIncorrectSwaps++;
                 }
@@ -133,9 +124,16 @@ public class ApproximateOverlapFunctionImpl {
 
             // print the number of swaps in the last hour every 10 minutes
             Date now = new Date();
-            if (now.getTime() - lastPrintTime.getTime() >= 600000) { // 600000 milliseconds = 10 minutes
+            if (now.getTime() - lastPrintTime.getTime() >= 3600000) { // 600000 milliseconds = 10 minutes
                 logger.log("Number of swaps in the last hour: " + swapTimestamps.size(), LogLevel.DEBUG);
                 lastPrintTime = now;
+
+                if (swapTimestamps.size() < 100) {
+                    logger.log("Less than 100 successful swaps of connections in the last hour, aborting program!",
+                            LogLevel.INFO, swapTimestamps.size());
+
+                    break;
+                }
             }
         }
 

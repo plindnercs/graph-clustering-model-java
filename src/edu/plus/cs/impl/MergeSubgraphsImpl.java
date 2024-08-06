@@ -51,7 +51,9 @@ public class MergeSubgraphsImpl {
                 " isolated nodes that had no neighbours after the extraction of the subgraph.", LogLevel.INFO,
                 fileSubgraph1, fileSubgraph2, fileConnectingEdges);
 
-        int numberOfEdges = mergedSubgraphs.values().stream().mapToInt(Set::size).sum();
+        // note that we have to divide the number of edges by two, since we only count both directions in an undirected
+        // graph as one edge
+        int numberOfEdges = mergedSubgraphs.values().stream().mapToInt(Set::size).sum() / 2;
 
         GraphWriter.writeGraphToFile(mergedSubgraphs, numberOfEdges, Mode.MERGE_SUBGRAPHS, false, logger);
     }

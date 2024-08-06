@@ -31,6 +31,7 @@ public class ExtractSubgraphImpl {
         String timestamp = now.format(formatter);
         String outputPath = "extract_subgraph_extracted_edges_output_" + timestamp + ".txt";
 
+        int numberOfExtractedEdges = 0;
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath))) {
             for (int outputVertexId : clusteredOutputGraphMembers) {
                 Set<Integer> originalNeighborsOfRemovedSubgraph = inputFileAdjacencyLists.get(outputVertexId);
@@ -48,6 +49,7 @@ public class ExtractSubgraphImpl {
                         writer.write(" ");
                     }
                     vertexCnt++;
+                    numberOfExtractedEdges++;
                 }
 
                 writer.write("\n");
@@ -56,7 +58,8 @@ public class ExtractSubgraphImpl {
             logger.log("Error writing to output file: " + outputPath + "; " + e.getMessage(), LogLevel.ERROR);
         }
 
-        logger.log("Exported the previous edges between the extracted subgraph and the clustered output graph.", LogLevel.INFO);
+        logger.log("Exported the previous edges between the extracted subgraph and the clustered output graph.",
+                LogLevel.INFO, numberOfExtractedEdges);
 
         // remove the vertices from the clustered output graph from the original input graph to obtain the extracted
         // subgraph
@@ -77,7 +80,9 @@ public class ExtractSubgraphImpl {
         logger.log("Removed the edges between the extracted subgraph and the clustered output graph. Step 2/2 of obtaining the extracted subgraph.",
                 LogLevel.INFO);
 
-        int numberOfEdges = inputFileAdjacencyLists.values().stream().mapToInt(Set::size).sum();
+        // note that we have to divide the number of edges by two, since we only count both directions in an undirected
+        // graph as one edge
+        int numberOfEdges = inputFileAdjacencyLists.values().stream().mapToInt(Set::size).sum() / 2;
 
         // as the last step we write the extracted graph to a metis file
         GraphWriter.writeGraphToFile(inputFileAdjacencyLists, numberOfEdges, Mode.EXTRACT_SUBGRAPH, false, logger);

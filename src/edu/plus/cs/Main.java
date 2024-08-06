@@ -21,11 +21,8 @@ public class Main {
 
         Mode mode = Mode.valueOf(args[0].toUpperCase());
         boolean onMach2 = false;
-        if (args.length > 4) {
-            onMach2 = Boolean.parseBoolean(args[4]);
-        }
 
-        Logger logger = new Logger(Logger.createLoggingFileName(onMach2));
+        Logger logger;
         switch (mode) {
             case RANDOM_MATCHING:
                 if (args.length < 4) {
@@ -37,6 +34,12 @@ public class Main {
                 String communitiesFile = args[1];
                 String overlapFunctionFile = args[2];
                 double randomMatchingFactor = Double.parseDouble(args[3]);
+
+                if (args.length > 4) {
+                    onMach2 = Boolean.parseBoolean(args[4]);
+                }
+
+                logger = new Logger(Logger.createLoggingFileName(onMach2));
 
                 RandomMatchingImpl.prepareAndExecuteRandomMatching(communitiesFile, overlapFunctionFile,
                         randomMatchingFactor, onMach2, logger);
@@ -55,6 +58,12 @@ public class Main {
                 int targetNumberOfEdges = Integer.parseInt(args[2]);
                 double deviationFactor = Double.parseDouble(args[3]);
 
+                if (args.length > 4) {
+                    onMach2 = Boolean.parseBoolean(args[4]);
+                }
+
+                logger = new Logger(Logger.createLoggingFileName(onMach2));
+
                 DrawEdgesImpl.drawEdges(matchedCommunitiesFile, targetNumberOfEdges, deviationFactor, onMach2, logger);
 
                 break;
@@ -67,6 +76,8 @@ public class Main {
 
                 String originalInputGraphFile = args[1];
                 String clusteredOutputGraphFile = args[2];
+
+                logger = new Logger(Logger.createLoggingFileName(onMach2));
 
                 ExtractSubgraphImpl.extractSubgraph(originalInputGraphFile, clusteredOutputGraphFile, logger);
 
@@ -81,6 +92,8 @@ public class Main {
                 String fileSubgraph1 = args[1];
                 String fileSubgraph2 = args[2];
                 String fileConnectingEdges = args[3];
+
+                logger = new Logger(Logger.createLoggingFileName(onMach2));
 
                 MergeSubgraphsImpl.mergeSubgraphs(fileSubgraph1, fileSubgraph2, fileConnectingEdges, logger);
 
