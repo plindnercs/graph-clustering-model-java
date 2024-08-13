@@ -37,7 +37,7 @@ public class ExtractSubgraphImpl {
                 Set<Integer> originalNeighborsOfRemovedSubgraph = inputFileAdjacencyLists.get(outputVertexId);
                 originalNeighborsOfRemovedSubgraph.removeAll(clusteredOutputGraphMembers);
 
-                // we write: <outputVertexId>: <extractedVertexId>+
+                // we write: <outputVertexId>: <extractedVertexId>
                 writer.write(Integer.toString(outputVertexId));
                 writer.write(": ");
 

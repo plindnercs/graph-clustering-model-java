@@ -68,6 +68,8 @@ public class GraphWriter {
                     writer.newLine();
                 }
             }
+
+            logger.log("Finished writing into file", LogLevel.DEBUG, outputPath);
         } catch (IOException e) {
             logger.log("Error writing to the output file: " + e.getMessage(), LogLevel.ERROR, outputPath);
         }

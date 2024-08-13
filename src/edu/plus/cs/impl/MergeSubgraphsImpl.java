@@ -22,6 +22,9 @@ public class MergeSubgraphsImpl {
 
         HashMap<Integer, Set<Integer>> mergedSubgraphs = mergeMaps(subgraph1, subgraph2);
 
+        logger.log("Number of edges in merged subgraphs (without connections between them): "
+                + mergedSubgraphs.values().stream().mapToInt(Set::size).sum() / 2, LogLevel.DEBUG);
+
         int isolatedNodesAfterExtraction = 0;
         for (Integer edgeFrom : edges.keySet()) {
             Set<Integer> setOfEdgesTo = edges.get(edgeFrom);
@@ -62,17 +65,19 @@ public class MergeSubgraphsImpl {
         HashMap<K, Set<V>> mergedMap = new HashMap<>();
 
         for (K key : map1.keySet()) {
-            if (mergedMap.containsKey(key)) {
-                mergedMap.get(key).addAll(map1.get(key));
-            }
-            mergedMap.put(key, map1.get(key));
+            mergedMap.put(key, new HashSet<>());
         }
 
         for (K key : map2.keySet()) {
-            if (mergedMap.containsKey(key)) {
-                mergedMap.get(key).addAll(map2.get(key));
-            }
-            mergedMap.put(key, map2.get(key));
+            mergedMap.put(key, new HashSet<>());
+        }
+
+        for (K key : map1.keySet()) {
+            mergedMap.get(key).addAll(map1.get(key));
+        }
+
+        for (K key : map2.keySet()) {
+            mergedMap.get(key).addAll(map2.get(key));
         }
 
         return mergedMap;
