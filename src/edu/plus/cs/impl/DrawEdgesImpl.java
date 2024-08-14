@@ -79,7 +79,7 @@ public class DrawEdgesImpl {
             }
         }
 
-        GraphWriter.writeGraphToFile(adjacencyLists, currentNumberOfEdges, Mode.DRAW_EDGES, onMach2, logger);
+        GraphWriter.writeGraphToFile(adjacencyLists, currentNumberOfEdges, Mode.DRAW_EDGES, onMach2, logger, true);
 
         logger.log("Reached target number of edges " + targetNumberOfEdges + " with deviation factor of "
                 + deviationFactor + " by drawing " + currentNumberOfEdges + " edges", LogLevel.INFO, matchedCommunitiesFile);

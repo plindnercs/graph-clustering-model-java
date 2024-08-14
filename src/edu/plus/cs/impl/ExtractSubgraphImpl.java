@@ -85,7 +85,7 @@ public class ExtractSubgraphImpl {
         int numberOfEdges = inputFileAdjacencyLists.values().stream().mapToInt(Set::size).sum() / 2;
 
         // as the last step we write the extracted graph to a metis file
-        GraphWriter.writeGraphToFile(inputFileAdjacencyLists, numberOfEdges, Mode.EXTRACT_SUBGRAPH, false, logger);
+        GraphWriter.writeGraphToFile(inputFileAdjacencyLists, numberOfEdges, Mode.EXTRACT_SUBGRAPH, false, logger, false);
 
         logger.log("Wrote extracted subgraph to metis file.", LogLevel.INFO);
     }

@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
  */
 public class GraphWriter {
     public static void writeGraphToFile(HashMap<Integer, Set<Integer>> adjacencyLists, int numberOfEdges, Mode mode,
-                                        boolean onMach2, Logger logger) {
+                                        boolean onMach2, Logger logger, boolean countEmpty) {
         LocalDateTime now = LocalDateTime.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
         String timestamp = now.format(formatter);
@@ -46,7 +46,11 @@ public class GraphWriter {
         List<Integer> verticesIds = adjacencyLists.keySet().stream().sorted().collect(Collectors.toList());
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath))) {
             // write metis header: <numberOfVertices> <numberOfEdges>
-            writer.write(Integer.toString(verticesIds.size()));
+            if (countEmpty) {
+                writer.write(Integer.toString(verticesIds.getLast()));
+            } else {
+                writer.write(Long.toString(verticesIds.stream().filter(id -> !adjacencyLists.get(id).isEmpty()).count()));
+            }
             writer.write(" ");
             writer.write(Integer.toString(numberOfEdges));
             writer.newLine();

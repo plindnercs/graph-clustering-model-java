@@ -58,7 +58,7 @@ public class MergeSubgraphsImpl {
         // graph as one edge
         int numberOfEdges = mergedSubgraphs.values().stream().mapToInt(Set::size).sum() / 2;
 
-        GraphWriter.writeGraphToFile(mergedSubgraphs, numberOfEdges, Mode.MERGE_SUBGRAPHS, false, logger);
+        GraphWriter.writeGraphToFile(mergedSubgraphs, numberOfEdges, Mode.MERGE_SUBGRAPHS, false, logger, false);
     }
 
     private static <K, V> HashMap<K, Set<V>> mergeMaps(Map<K, Set<V>> map1, Map<K, Set<V>> map2) {
