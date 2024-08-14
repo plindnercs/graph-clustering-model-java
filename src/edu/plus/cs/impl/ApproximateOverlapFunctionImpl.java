@@ -29,11 +29,19 @@ public class ApproximateOverlapFunctionImpl {
         boolean incorrectSwap = false;
         long numberOfSwaps = 0;
 
+        // TODO: experimental setup
+        Date startTime = new Date();
+        int sixHoursInMs = 21600000;
+        double improvementFactor = 2.0;
+
         logger.log("Error before swaps: " + calculateQuadraticError(h, hGenerated), LogLevel.INFO);
-        while (numberOfConsecutiveIncorrectSwaps < 1000 && numberOfSwaps < 1000000) { // TODO: how many consecutive number of incorrect swaps should we allow before terminating?
+        while (numberOfConsecutiveIncorrectSwaps < 1000 && numberOfSwaps < 1000000
+            && (new Date().getTime() - startTime.getTime() < sixHoursInMs)) { // here we only want to compute for six hours
             // choose two random communities
-            Community firstCommunity = communitiesStubs.get(random.ints(1, 1, communityStubsIds.size()).findFirst().getAsInt());
-            Community secondCommunity = communitiesStubs.get(random.ints(1, 1, communityStubsIds.size()).findFirst().getAsInt());
+            Community firstCommunity = communitiesStubs.get(random.ints(1, 1, communityStubsIds.size())
+                    .findFirst().getAsInt());
+            Community secondCommunity = communitiesStubs.get(random.ints(1, 1, communityStubsIds.size())
+                    .findFirst().getAsInt());
 
             if (firstCommunity.getId() == secondCommunity.getId()) {
                 continue;
@@ -87,7 +95,7 @@ public class ApproximateOverlapFunctionImpl {
                     communityAdjacencies, hGenerated, changedPositions, logger);
 
             // evaluate the new state
-            if (isImprovement(originalHGenerated, hGenerated, h, changedPositions)) {
+            if (isImprovement(originalHGenerated, hGenerated, h, changedPositions, improvementFactor)) {
                 logger.log("Improvement found with swap!", LogLevel.DEBUG, firstCommunity.getId(), secondCommunity.getId(), firstMember, secondMember);
                 incorrectSwap = false;
                 numberOfConsecutiveIncorrectSwaps = 0;
@@ -134,6 +142,12 @@ public class ApproximateOverlapFunctionImpl {
 
                     break;
                 }
+
+                logger.log("Writing intermediate result to file ...", LogLevel.DEBUG);
+                logger.log("Intermediate error after swaps: " + calculateQuadraticError(h, hGenerated), LogLevel.DEBUG);
+
+                CommunityWriter.writeCommunitiesToFile(communitiesStubs, "intermediate_approx_", onMach2, logger);
+                FunctionOutputWriter.writeToOutputFile(hGenerated, "intermediate_approx_", onMach2, logger);
             }
         }
 
@@ -326,7 +340,9 @@ public class ApproximateOverlapFunctionImpl {
         }
     }
 
-    private static boolean isImprovement(int[][] originalHGenerated, int[][] newHGenerated, int[][] targetH, Set<ChangedPosition> changedPositions) {
+    private static boolean isImprovement(int[][] originalHGenerated, int[][] newHGenerated,
+                                         int[][] targetH, Set<ChangedPosition> changedPositions,
+                                         double improvementFactor) {
         int improved = 0;
         int worsened = 0;
 
@@ -347,7 +363,7 @@ public class ApproximateOverlapFunctionImpl {
         //     System.out.println("Worsened larger: " + worsened + " > " + improved);
         // }
 
-        return improved > worsened;
+        return improved > (worsened * improvementFactor);
     }
 
     private static void changeOverlapFunction(int firstCommunitySize, int secondCommunitySize, int overlapSize,
