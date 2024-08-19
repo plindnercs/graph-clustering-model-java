@@ -47,7 +47,7 @@ public class GraphWriter {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(outputPath))) {
             // write metis header: <numberOfVertices> <numberOfEdges>
             if (countEmpty) {
-                writer.write(Integer.toString(verticesIds.getLast()));
+                writer.write(Integer.toString(verticesIds.get(verticesIds.size() - 1)));
             } else {
                 writer.write(Long.toString(verticesIds.stream().filter(id -> !adjacencyLists.get(id).isEmpty()).count()));
             }

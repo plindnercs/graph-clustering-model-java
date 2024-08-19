@@ -32,7 +32,7 @@ public class ApproximateOverlapFunctionImpl {
         // TODO: experimental setup
         Date startTime = new Date();
         int sixHoursInMs = 21600000;
-        double improvementFactor = 2.0;
+        double improvementFactor = 1.5; // 2.0 before
 
         logger.log("Error before swaps: " + calculateQuadraticError(h, hGenerated), LogLevel.INFO);
         while (numberOfConsecutiveIncorrectSwaps < 1000 && numberOfSwaps < 1000000
