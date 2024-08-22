@@ -74,8 +74,13 @@ public class Main {
                     return;
                 }
 
+
                 String originalInputGraphFile = args[1];
                 String clusteredOutputGraphFile = args[2];
+
+                if (args.length > 3) {
+                    onMach2 = Boolean.parseBoolean(args[3]);
+                }
 
                 logger = new Logger(Logger.createLoggingFileName(onMach2));
 
@@ -93,9 +98,13 @@ public class Main {
                 String fileSubgraph2 = args[2];
                 String fileConnectingEdges = args[3];
 
+
+                if (args.length > 4) {
+                    onMach2 = Boolean.parseBoolean(args[4]);
+                }
                 logger = new Logger(Logger.createLoggingFileName(onMach2));
 
-                MergeSubgraphsImpl.mergeSubgraphs(fileSubgraph1, fileSubgraph2, fileConnectingEdges, logger);
+                MergeSubgraphsImpl.mergeSubgraphs(fileSubgraph1, fileSubgraph2, fileConnectingEdges, logger, onMach2);
 
                 break;
         }

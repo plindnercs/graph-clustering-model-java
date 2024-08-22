@@ -3,6 +3,7 @@ package edu.plus.cs.impl;
 import edu.plus.cs.io.EdgeReader;
 import edu.plus.cs.io.GraphReader;
 import edu.plus.cs.io.GraphWriter;
+import edu.plus.cs.util.Constants;
 import edu.plus.cs.util.LogLevel;
 import edu.plus.cs.util.Logger;
 import edu.plus.cs.util.Mode;
@@ -14,7 +15,12 @@ import java.util.Set;
 
 public class MergeSubgraphsImpl {
     public static void mergeSubgraphs(String fileSubgraph1, String fileSubgraph2, String fileConnectingEdges,
-                                      Logger logger) {
+                                      Logger logger, boolean onMach2) {
+        if (onMach2) {
+            fileSubgraph1 = Constants.MACH2_DIR_PREFIX + fileSubgraph1;
+            fileSubgraph2 = Constants.MACH2_DIR_PREFIX + fileSubgraph2;
+            fileConnectingEdges = Constants.MACH2_DIR_PREFIX + fileConnectingEdges;
+        }
         HashMap<Integer, Set<Integer>> subgraph1 = GraphReader.readGraphFromMetisFile(fileSubgraph1, logger);
         HashMap<Integer, Set<Integer>> subgraph2 = GraphReader.readGraphFromMetisFile(fileSubgraph2, logger);
 
@@ -58,7 +64,7 @@ public class MergeSubgraphsImpl {
         // graph as one edge
         int numberOfEdges = mergedSubgraphs.values().stream().mapToInt(Set::size).sum() / 2;
 
-        GraphWriter.writeGraphToFile(mergedSubgraphs, numberOfEdges, Mode.MERGE_SUBGRAPHS, false, logger, false);
+        GraphWriter.writeGraphToFile(mergedSubgraphs, numberOfEdges, Mode.MERGE_SUBGRAPHS, onMach2, logger, true);
     }
 
     private static <K, V> HashMap<K, Set<V>> mergeMaps(Map<K, Set<V>> map1, Map<K, Set<V>> map2) {
