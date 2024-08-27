@@ -15,6 +15,17 @@ import java.util.*;
 
 public class ApproximateOverlapFunctionImpl {
 
+    /**
+     * Tries to approximate the original overlap function by
+     * swapping members between communities
+     * @param communitiesStubs Current communities
+     * @param membersStubs Current members
+     * @param communityAdjacencies Overlaps between communities
+     * @param h Overlap function
+     * @param hGenerated Generated overlap function
+     * @param onMach2 Changes output file directory prefix
+     * @param logger Logging Object
+     */
     public static void approximateOverlapFunction(HashMap<Integer, Community> communitiesStubs,
                                                   HashMap<Integer, Member> membersStubs, HashMap<Integer,
             HashMap<Integer, CommunityAdjacency>> communityAdjacencies, int[][] h, int[][] hGenerated, boolean onMach2,
@@ -165,6 +176,20 @@ public class ApproximateOverlapFunctionImpl {
         FunctionOutputWriter.writeToOutputFile(hGenerated, "after_approx_", onMach2, logger);
     }
 
+    /**
+     * Updates communityAdjacencies and hGenerated to reflect swaps of
+     * community members
+     * @param firstCommunity Community Id
+     * @param secondCommunity Community Id
+     * @param firstMemberId Member Id
+     * @param secondMemberId Member Id
+     * @param communitiesStubs All current working communities
+     * @param membersStubs All current working members
+     * @param communityAdjacencies All community overlaps
+     * @param hGenerated Generated overlap fct
+     * @param changedPositions Which communities have swapped members
+     * @param logger Logging Object
+     */
     private static void updateOverlaps(Community firstCommunity, Community secondCommunity,
                                        int firstMemberId, int secondMemberId,
                                        HashMap<Integer, Community> communitiesStubs,
@@ -340,6 +365,16 @@ public class ApproximateOverlapFunctionImpl {
         }
     }
 
+    /**
+     * Checks if newHGenerated is more accurate to targetH than originalHGenerated
+     * @param originalHGenerated Function before current swaps
+     * @param newHGenerated Function after current swaps
+     * @param targetH The function we want to approximate
+     * @param changedPositions All communities that are affected by swaps
+     * @param improvementFactor By how much more there should be improvements
+     * @return True if there are more improvements than deteriorations in absolute
+     * errors when comparing overlap functions
+     */
     private static boolean isImprovement(int[][] originalHGenerated, int[][] newHGenerated,
                                          int[][] targetH, Set<ChangedPosition> changedPositions,
                                          double improvementFactor) {
@@ -404,6 +439,13 @@ public class ApproximateOverlapFunctionImpl {
         }
     }
 
+    /**
+     *
+     * @param firstMemberId Member Id
+     * @param secondMemberId Member Id
+     * @param membersStubs Current members
+     * @return All communities members are a part of
+     */
     private static Set<Integer> identifyAffectedCommunities(int firstMemberId, int secondMemberId,
                                                             HashMap<Integer, Member> membersStubs) {
         Set<Integer> affectedCommunities = new HashSet<>(membersStubs.get(firstMemberId).getCommunities());
@@ -411,6 +453,12 @@ public class ApproximateOverlapFunctionImpl {
         return affectedCommunities;
     }
 
+    /**
+     *
+     * @param communityAdjacencies All community adjacencies
+     * @param affectedCommunities Communities affected by a swap
+     * @return the adjacencies of the communities that will be affected by the swap
+     */
     private static HashMap<Integer, HashMap<Integer, CommunityAdjacency>> backupCommunityAdjacencies(
             HashMap<Integer, HashMap<Integer, CommunityAdjacency>> communityAdjacencies, Set<Integer> affectedCommunities) {
         HashMap<Integer, HashMap<Integer, CommunityAdjacency>> backup = new HashMap<>();

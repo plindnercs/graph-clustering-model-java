@@ -17,6 +17,7 @@ import java.util.Set;
 
 public class ExtractSubgraphImpl {
 
+
     public static void extractSubgraph(String originalInputGraphFile, String clusteredOutputGraphFile, Logger logger) {
         HashMap<Integer, Set<Integer>> inputFileAdjacencyLists = GraphReader.readGraphFromMetisFile(originalInputGraphFile, logger);
         Set<Integer> clusteredOutputGraphMembers = CommunityReader.readUniqueMembersFromFile(clusteredOutputGraphFile, logger);

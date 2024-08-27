@@ -17,6 +17,12 @@ public class Logger {
         this.loggingFile = new File(path);
     }
 
+    /**
+     * Writes a log message to file and output
+     * @param message Message to be logged
+     * @param logLevel The type of log message
+     * @param objects Objects which will be written to log file
+     */
     public void log(String message, LogLevel logLevel, Object... objects) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(getCurrentTimestamp());
